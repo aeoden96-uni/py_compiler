@@ -34,15 +34,18 @@ class T(TipoviTokena):
 
     class TRUE(Token):
         literal = 'TRUE'
-        def vrijednost(self, mem, unutar): return 1
+        def vrijednost(self, mem, unutar): return 'TRUE'
+        def izvrši(self, mem): return 'TRUE'
 
     class FALSE(Token):
         literal = 'FALSE'
-        def vrijednost(self, mem, unutar): return -1
+        def vrijednost(self, mem, unutar): return 'FALSE'
+        def izvrši(self, mem): return 'FALSE'
 
     class UNDEFINED(Token):
         literal = 'UNDEFINED'
-        def vrijednost(self, mem, unutar): return 0
+        def vrijednost(self, mem, unutar): return 'UNDEFINED'
+        def izvrši(self, mem): return 'UNDEFINED'
 
     
     #TOKENI ZA PRETVORBU TIPOVA
@@ -68,16 +71,23 @@ class T(TipoviTokena):
     class IME(Token):
         #vraća stogod je u memoriji na mjestu IME
         def vrijednost(self, mem): return mem[self]
+        def vrsta(self): return 'IME'
         def izvrši(self,mem):
             return mem[self]
 
     class IME_LOG(Token):
         #vraća stogod je u memoriji na mjestu IME
         def vrijednost(self, mem): return mem[self]
+        def vrsta(self): return 'IME_LOG'
+        def izvrši(self,mem):
+            return mem[self]
 
     class STRING(Token):
         #vraća stogod je u memoriji na mjestu IME
         def vrijednost(self): return self.sadržaj[1:-1]
+        def izvrši(self,mem):
+            #return mem[self]
+            return self.sadržaj[1:-1]
 
 
     
@@ -156,6 +166,7 @@ class P(Parser):
         if self > T.FOR: return self.petlja()
         elif self > T.IF: return self.grananje()
         elif self > T.IME: return self.pridruzivanje()
+        elif self > T.IME_LOG: return self.pridruzivanje()
         elif self > T.U_OKOLINU: return self.u_okolinu()
         elif br := self >> T.BREAK:
             self >> T.TOČKAZ
@@ -205,6 +216,11 @@ class P(Parser):
             self >> T.TOČKAZ
             return U_okolinu([funkcija])
         elif ime:= self >= T.IME:
+            self >> T.OZATV
+            self >> T.TOČKAZ
+            return U_okolinu([funkcija,ime])
+
+        elif ime:= self >= T.IME_LOG:
             self >> T.OZATV
             self >> T.TOČKAZ
             return U_okolinu([funkcija,ime])
@@ -306,8 +322,13 @@ class P(Parser):
         if broj := self >= T.BROJ: return broj
         if string := self >= T.STRING:
             return string
+
         elif self > T.IZ_OKOLINE:
             return self.iz_okoline()
+
+        elif ime:= self >= T.IME:
+            return ime
+        
             
         elif log := self >= T.TRUE:
              return log
@@ -316,11 +337,14 @@ class P(Parser):
         elif log := self >= T.UNDEFINED:
              return log
 
-        elif self >> T.OOTV:
+
+
+
+        elif self >> T.OOTV: #PROMJENA TIPA
             if tip :=self >= T.INT_TIP:
                 self >> T.OZATV
-                i=self.izraz()
-                return i
+                u_zagradi=self.izraz()
+                return U_int(u_zagradi)
             else:
                 u_zagradi = self.izraz()
                 self >> T.OZATV
@@ -365,6 +389,14 @@ class U_okolinu(AST('funkcija_logika')):
         #if self.novired ^ T.ENDL:
         #     print()
 
+class U_int(AST('izraz')):
+    def izvrši(self, mem):
+        r=self.izraz.izvrši(mem)
+
+        print(r)
+
+        return int(r)
+
 class Grananje(AST('logika naredba')):
     def izvrši(self, mem):
         if self.logika.vrijednost(mem) == T.TRUE:
@@ -373,6 +405,11 @@ class Grananje(AST('logika naredba')):
 class Pridruzivanje(AST('varijabla izraz')):
     def izvrši(self, mem):
         r=self.izraz.izvrši(mem)
+
+        if self.varijabla.vrsta()=='IME':
+            if r in [T.TRUE._name_, T.FALSE._name_,T.UNDEFINED._name_]:
+                raise GreškaIzvođenja("Can't save logic value in a regular variable.")
+            
         mem[self.varijabla] =r
 
 
@@ -383,7 +420,7 @@ class Iz_okoline(AST('funkcija_logika')):
 
 class Zbroj(AST('pribrojnici')):
     def vrijednost(izraz):
-        a, b = izraz.pribrojnici
+        a, b = self.izraz.pribrojnici
         return a.vrijednost() + b.vrijednost()
 
     def optim(izraz):
@@ -409,9 +446,10 @@ class EQ(AST('izrazi')):
     def izvrši(self, mem):
         return
 
-class OR(AST('faktori')):
+class OR(AST('elements')):
     def izvrši(self, mem):
-        return
+        if self.elements[0] or  self.elements[1] :
+            return T.TRUE
 class AND(AST('faktori')):
     def izvrši(self, mem):
         return
@@ -432,18 +470,20 @@ class Potencija(AST('baza eksponent')):
 
 ulaz ='''\
 
-
-
 v=2 + $getTemp() ;
 
-g= 3;
+z=5;
+Z = FALSE or TRUE;
 
-#ispisi(v);
+
+#ispisi(Z);
+
+
 
 
 '''
 #print(ulaz)
-#P.tokeniziraj(ulaz)
+P.tokeniziraj(ulaz)
 ######################################
 
 cpp = P(ulaz)
