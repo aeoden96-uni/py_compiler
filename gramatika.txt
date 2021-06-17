@@ -1,0 +1,110 @@
+VRSTE VARIJABLI =>  LOG_VAR i DEF_VAR
+
+
+
+START 			-> NAREDBA VIŠE
+VIŠE  			-> NAREDBA VIŠE | ''
+
+NAREDBA 		-> 	PETLJA |
+					GRANANJE |
+					PIŠI ; |
+					BREAK ; | 
+					PRIDRUZIVANJE ;|
+					KOMPREHENZIJA ;
+
+PETLJA 			-> FOR NAREDBA | FOR { VIŠE } | 
+				   FOREACH NAREDBA | FOREACH { VIŠE }
+
+FOR     		-> for( DEF_VAR# =  BROJ ; DEF_VAR# < BROJ ; DEF_VAR# INCR)
+FOREACH 		-> foreach DEF_VAR# in LISTA
+
+INCR 			-> ++ | +BROJ
+
+#KOMPREHENZIJA 	->  DEF_VAR OPER_PRIDRUZ [ aritm_operacija FOREACH ] |
+#				  [ izraz FOREACH ]	
+
+PIŠI 			->  #U_OKOLINU ( izraz ) 
+
+ČITAJ 			-> $IZ_OKOLINE( ) | $IZ_OKOLINE ( BOOL )
+
+GRANANJE 		-> 	if( LOGIKA ) { VIŠE }<- jos ne zagrade
+
+PRIDRUZIVANJE 	->	DEF_VAR OPER_PRIDRUZ    DEF_VAR |               <-visak?    
+					DEF_VAR OPER_PRIDRUZ    izraz   |
+					DEF_VAR OPER_PRIDRUZ    $fja   |
+					LOG_VAR OPER_PRIDRUZ 	LOGIKA    <- moze biti tu i read fja
+				 
+		 		 
+LOGIKA 			->	KONJ ILI LOGIKA | KONJ
+KONJ  			->  log_literal I KONJ      | log_literal
+log_literal 	->  izraz <  izraz | 
+					izraz == izraz |
+					( LOGIKA )     |
+					T | F | U  | 
+					LOG_VAR |
+
+
+
+#aritm operacije= 2 tipa varijabli + LISTE		
+izraz 			-> 	član PLUS izraz | član MINUS izraz | član
+član 			-> 	faktor PUTA član | faktor KROZ član |faktor
+faktor 			-> 	baza NA faktor | baza 
+baza 			-> 	BROJ | 	
+					(tip)izraz | 
+					$IZ_OKOLINE( ) | 
+					DEF_VAR | 
+					( izraz )	   
+				 
+				
+#liste	DODATI KASNIJE
+element 		-> BROJ | LISTA | izraz
+LISTA 			-> UOTV elementi UZATV
+elementi 		-> element | element ZAREZ elementi | ''
+
+####################################################
+
+#DODATI:
+-KOMPREHENZIJE
+		kubovi = [i**3 for i in [1,2,3,4] if i < 2]
+		
+-FJE KOJE SALJU U OKOLINU
+
+-LISTE 
+
+-ARITMETIKU
+
+#ARITMETIKA
+# izraz -> član PLUS izraz | član MINUS izraz | član
+# član -> faktor PUTA član | faktor KROZ član |faktor
+# faktor -> baza NA faktor | baza | MINUS faktor ???
+# baza -> BROJ | OTVORENA izraz ZATVORENA
+
+primjer
+(2+3)*4^1
+
+
+#ARITMETIKA KOMPL
+# start -> izraz STRELICA IME start | izraz
+# izraz -> izraz PLUS član | izraz MINUS član | član
+# član -> član PUTA faktor | član KROZ faktor | faktor
+# faktor -> baza NA faktor | baza | MINUS faktor 
+# baza -> BROJ | IME | I | OTV izraz ZATV | baza KONJ
+
+primjer
+f'''\
+    8 -> d
+    10^d -> n
+    (1+1/n)^n -> e
+    {pi} -> pi
+    e^(i*pi) + 1 -> skoro0
+    skoro0
+'''
+
+
+#LISTE stringova
+# element -> BROJ | lista
+# lista -> UOTV elementi UZATV
+# elementi -> element | element ZAREZ elementi | ''
+
+primjer
+[23, "ab\"c]", 'a[]', [2, 3, ], 523, [1,2,2,3],'"', '\'', "\e", "\\", '']
