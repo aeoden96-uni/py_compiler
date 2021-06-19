@@ -22,10 +22,7 @@ class T(TipoviTokena):
 
 
 
-    #token za BREAK
-    class BREAK(Token):
-        literal = 'break'
-        def izvrši(self, mem): raise Prekid
+    
 
 
     def getBool(integer):
@@ -96,14 +93,52 @@ class T(TipoviTokena):
             return self
 
 
-    
-    class U_OKOLINU(Token):
-        def vrijednost(self, mem): 
-            print("zatrazi vrij")
-            return mem[self]
 
-    class IZ_OKOLINE(Token):
+    #token za BREAK
+    class BREAK(Token):
+        literal = 'break'
+        def izvrši(self, mem): raise Prekid
+
+
+    #FJE KOJE DOLAZE IZ OKOLINE POCINJU S $
+    class IZ_OKOLINE_DIST(Token):
+        #get distance from the wall
+        literal = 'getDistance'
+        def izvrši(self, mem): return mem[self]
         def vrijednost(self, mem): return mem[self]
+    
+    class IZ_OKOLINE_POWER(Token):
+        literal = 'getPower'
+        def izvrši(self, mem): return mem[self]
+        def vrijednost(self, mem): return mem[self]
+
+
+    class IZ_OKOLINE_SPEED(Token):
+        literal = 'getSpeed'
+        def izvrši(self, mem): return mem[self]
+        def vrijednost(self, mem): return mem[self]
+
+    
+    #FJE KOJE IDU U OKOLINU POCINJU S #
+    class U_OKOLINU_STEPS(Token):
+        literal = 'setSteps'
+        def vrijednost(self, mem): 
+            return mem[self]
+        def vrijednost(self, mem): return mem[self]
+
+    class U_OKOLINU_POWER(Token):
+        literal = 'setPower'
+        def vrijednost(self, mem): 
+            return mem[self]
+        def vrijednost(self, mem): return mem[self]
+    class U_OKOLINU_SPEED(Token):
+        literal = 'setSpeed'
+        def vrijednost(self, mem): 
+            return mem[self]
+        def vrijednost(self, mem): return mem[self]
+
+
+    
 
 
 def cpp(lex):
@@ -122,20 +157,17 @@ def cpp(lex):
             #raisea LeksičkaGreška s porukom
             #else: raise lex.greška('u ovom jeziku nema samostalnog +')
             else: yield lex.token(T.PLUS)
-
-
-        #ako je trenutni < i iduci < strpaj u MMANJE inace strpaj samo < u MANJE
+      
         elif znak == '<': yield lex.token(T.MMANJE if lex >= '<' else T.MANJE)
-        #slicno kao gore
+       
         elif znak=='=': yield lex.token(T.JJEDNAKO if lex >= '=' else T.JEDNAKO)
         
-        elif znak=='#':
-            lex.zvijezda(identifikator)
-            yield lex.literal(T.U_OKOLINU)
+        #elif znak=='#':
+        #    lex.zvijezda(identifikator)
+        #    yield lex.literal(T.U_OKOLINU)
 
-        elif znak=='$':
-            lex.zvijezda(identifikator)
-            yield lex.literal(T.IZ_OKOLINE)
+        #elif znak=='$':
+        #   yield lex.literal(T)
         
         elif znak== '"':
             
@@ -173,7 +205,7 @@ class P(Parser):
         elif self > T.IF: return self.grananje()
         elif self > T.IME: return self.pridruzivanje()
         elif self > T.IME_LOG: return self.pridruzivanje()
-        elif self > T.U_OKOLINU: return self.u_okolinu()
+        elif self > { T.U_OKOLINU_SPEED,T.U_OKOLINU_STEPS,T.U_OKOLINU_POWER}: return self.u_okolinu()
         elif br := self >> T.BREAK:
             self >> T.TOČKAZ
             return br
@@ -205,32 +237,34 @@ class P(Parser):
         
 
     def iz_okoline(self):
-        fn=self >> T.IZ_OKOLINE
+        fn=self >> {T.IZ_OKOLINE_DIST,T.IZ_OKOLINE_SPEED,T.IZ_OKOLINE_POWER}
         self >> T.OOTV
         self >>T.OZATV
-        #return fn
 
-        return Iz_okoline([fn])
+        return Iz_okoline(fn)
         
         
         
     def u_okolinu(self):
-        funkcija = self >> T.U_OKOLINU
+        #definira sto moze biti argumenti fja koje idu u okolinu
+
+        f = self >> {T.U_OKOLINU_STEPS,T.U_OKOLINU_SPEED,T.U_OKOLINU_POWER}
+
         self >> T.OOTV
 
-        if self >= T.OZATV:
-            self >> T.TOČKAZ
-            return U_okolinu([funkcija])
-        elif ime:= self >= {T.IME,T.IME_LOG}:
+        if f ^ T.U_OKOLINU_POWER:
+            logika = self.logika()
             self >> T.OZATV
             self >> T.TOČKAZ
-            return U_okolinu([funkcija,ime])
-
+            return U_okolinu([f,logika])
+            
+        
         else:
             izraz = self.izraz()
             self >> T.OZATV
             self >> T.TOČKAZ
-            return U_okolinu([funkcija, izraz])
+            return U_okolinu([f,izraz])
+
         
 
        
@@ -335,7 +369,7 @@ class P(Parser):
         if broj := self >= T.BROJ: return broj
         if string := self >= T.STRING: return string
 
-        elif self > T.IZ_OKOLINE:
+        elif self > {T.IZ_OKOLINE_SPEED,T.IZ_OKOLINE_POWER,T.IZ_OKOLINE_DIST}:
             return self.iz_okoline()
 
         elif ime:= self >= T.IME:
@@ -390,20 +424,6 @@ class Petlja(AST('varijabla početak granica inkrement blok')):
             else: inkr = inkr.vrijednost(mem)
             mem[kv] += inkr 
 
-class U_okolinu(AST('funkcija_logika')):
-    def izvrši(self, mem):
-        r=self.funkcija_logika[1].vrijednost(mem)
-
-        print("U OKOLINU POSLANO: "+ str(r))
-
-        #for var in self.varijable: 
-        #    print(var.vrijednost(mem), end=' ')
-        #if self.novired ^ T.ENDL:
-        #     print()
-    def vrijednost(self,mem):
-        r=self.funkcija_logika[1].vrijednost(mem)
-
-        print("U OKOLINU POSLANO: "+ str(r))
 
 
 class U_int(AST('izraz')):
@@ -431,16 +451,49 @@ class Pridruzivanje(AST('varijabla izraz')):
 
         mem[self.varijabla] =r
 
+class U_okolinu(AST('funkcija_logika')):
+    def izvrši(self, mem):
+        self.vrijednost(mem)
+        #r=self.funkcija_logika[1].vrijednost(mem)
+
+
+
+    def vrijednost(self, mem):
+        r=self.funkcija_logika[1].vrijednost(mem)
+        if self.funkcija_logika[0] ^ T.U_OKOLINU_POWER:
+            print("U okolinu dan power: " + str(r))
+            return r
+        elif self.funkcija_logika[0] ^ T.U_OKOLINU_SPEED:
+            print("U okolinu dan speed: " + str(r))
+            return r
+        elif self.funkcija_logika[0] ^ T.U_OKOLINU_STEPS:
+            print("U okolinu dani steps: " + str(r))
+            return r
+        else:
+            raise GreškaIzvođenja("iz okoline nema")
 
 class Iz_okoline(AST('funkcija_logika')):
     def izvrši(self, mem):
         print("IZ OKOLINE DOBIVENO: 11")
         return 11
+    def vrijednost(self, mem):
+        if self.funkcija_logika ^ T.IZ_OKOLINE_SPEED:
+            print("IZ OKOLINE DOBIVENA BRZINA: 11")
+            return 11
+        elif self.funkcija_logika ^ T.IZ_OKOLINE_POWER:
+            print("IZ OKOLINE DOBIVEN POWER : 1")
+            return 1
+        elif self.funkcija_logika ^ T.IZ_OKOLINE_DIST:
+            print("IZ OKOLINE DOBIVENA UDALJENOST: 13")
+            return 13
+        else:
+            raise GreškaIzvođenja("iz okoline nema")
 
 
 class LESS(AST('izrazi')):
     def izvrši(self, mem):
         return
+
 class EQ(AST('izrazi')):
     def izvrši(self, mem):
         a=self.izrazi[0].izvrši(mem)
@@ -451,8 +504,7 @@ class EQ(AST('izrazi')):
         b=self.izrazi[1].vrijednost(mem)
 
         return a==b
-        
-       
+           
 
 class OR(AST('literali')):
     #OR(A, B) === MAX(A, B)
@@ -476,11 +528,7 @@ class OR(AST('literali')):
         val= max(a,b)
         return val
         return a if a.vrijednost(mem) > b.vrijednost(mem) else b
-
-
-        
-            
-            
+                     
 class AND(AST('literali')):
     #AND(A, B) ===MIN(A, B)
     def izvrši(self, mem):
@@ -523,6 +571,7 @@ class Zbroj(AST('pribrojnici')):
         a=self.pribrojnici[0].izvrši(mem)
         b=self.pribrojnici[1].izvrši(mem)
         return a+b
+
 class Umnožak(AST('faktori')):
     def izvrši(self,mem):
         a=self.faktori[0].izvrši(mem)
@@ -540,15 +589,17 @@ class Potencija(AST('baza eksponent')):
         return a**b
         
 
-
 ######################################
 
 ulaz ='''\
 
-for (i=0 ; i < 5 ;i ++)
-if( i == 2 or i == 4)
-    #ispisi(i);
 
+v = getSpeed();
+P = UNDEFINED;
+
+
+
+setPower(P);
 '''
 print(ulaz)
 P.tokeniziraj(ulaz)
