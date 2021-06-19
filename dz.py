@@ -1,4 +1,6 @@
 from vepar import *
+import turtle
+from time import sleep
 
 
 class T(TipoviTokena):
@@ -98,6 +100,7 @@ class T(TipoviTokena):
     class BREAK(Token):
         literal = 'break'
         def izvrši(self, mem): raise Prekid
+        def vrijednost(self, mem): raise Prekid
 
 
     #FJE KOJE DOLAZE IZ OKOLINE POCINJU S $
@@ -133,6 +136,11 @@ class T(TipoviTokena):
         def vrijednost(self, mem): return mem[self]
     class U_OKOLINU_SPEED(Token):
         literal = 'setSpeed'
+        def vrijednost(self, mem): 
+            return mem[self]
+        def vrijednost(self, mem): return mem[self]
+    class U_OKOLINU_ROTATION(Token):
+        literal = 'setRot'
         def vrijednost(self, mem): 
             return mem[self]
         def vrijednost(self, mem): return mem[self]
@@ -205,7 +213,7 @@ class P(Parser):
         elif self > T.IF: return self.grananje()
         elif self > T.IME: return self.pridruzivanje()
         elif self > T.IME_LOG: return self.pridruzivanje()
-        elif self > { T.U_OKOLINU_SPEED,T.U_OKOLINU_STEPS,T.U_OKOLINU_POWER}: return self.u_okolinu()
+        elif self > { T.U_OKOLINU_SPEED,T.U_OKOLINU_STEPS,T.U_OKOLINU_POWER,T.U_OKOLINU_ROTATION}: return self.u_okolinu()
         elif br := self >> T.BREAK:
             self >> T.TOČKAZ
             return br
@@ -248,7 +256,7 @@ class P(Parser):
     def u_okolinu(self):
         #definira sto moze biti argumenti fja koje idu u okolinu
 
-        f = self >> {T.U_OKOLINU_STEPS,T.U_OKOLINU_SPEED,T.U_OKOLINU_POWER}
+        f = self >> {T.U_OKOLINU_STEPS,T.U_OKOLINU_SPEED,T.U_OKOLINU_POWER,T.U_OKOLINU_ROTATION}
 
         self >> T.OOTV
 
@@ -436,6 +444,7 @@ class U_int(AST('izraz')):
     def vrijednost(self,mem):
         r=self.izraz.vrijednost(mem)
         return int(r)
+
 class Grananje(AST('logika naredba')):
     def izvrši(self, mem):
         if self.logika.vrijednost(mem) == 1:
@@ -450,7 +459,14 @@ class Pridruzivanje(AST('varijabla izraz')):
                 raise GreškaIzvođenja("Can't save logic value in a regular variable.")
 
         mem[self.varijabla] =r
+    def vrijednost(self, mem):
+        r=self.izraz.vrijednost(mem)
 
+        if self.varijabla.vrsta()=='IME':
+            if r in [T.TRUE._name_, T.FALSE._name_,T.UNDEFINED._name_]:
+                raise GreškaIzvođenja("Can't save logic value in a regular variable.")
+
+        mem[self.varijabla] =r
 class U_okolinu(AST('funkcija_logika')):
     def izvrši(self, mem):
         self.vrijednost(mem)
@@ -462,12 +478,24 @@ class U_okolinu(AST('funkcija_logika')):
         r=self.funkcija_logika[1].vrijednost(mem)
         if self.funkcija_logika[0] ^ T.U_OKOLINU_POWER:
             print("U okolinu dan power: " + str(r))
+            #sleep(2)
+            if r == -1:
+                t.penup()
+            elif r== 1 :
+                t.pendown()
             return r
         elif self.funkcija_logika[0] ^ T.U_OKOLINU_SPEED:
             print("U okolinu dan speed: " + str(r))
             return r
+        elif self.funkcija_logika[0] ^ T.U_OKOLINU_ROTATION:
+            print("U okolinu dan rotation: " + str(r))
+            t.left(r)
+            t.write(r)
+            return r
         elif self.funkcija_logika[0] ^ T.U_OKOLINU_STEPS:
             print("U okolinu dani steps: " + str(r))
+            
+            t.forward(r)
             return r
         else:
             raise GreškaIzvođenja("iz okoline nema")
@@ -594,19 +622,60 @@ class Potencija(AST('baza eksponent')):
 ulaz ='''\
 
 
-v = getSpeed();
-P = UNDEFINED;
+rot = 30;
+
+setPower(TRUE);
+for (i=0; i < 20 ; i++){
+
+    
+
+    setSteps(50);
+    setRot(rot);
+
+    
+
+    if (i == 10) rot = 20 + rot;
+    if (i == 15) setPower(FALSE);
+}
+
+setSteps(200);
+setRot(30);
 
 
 
-setPower(P);
+
 '''
 print(ulaz)
 P.tokeniziraj(ulaz)
-######################################
 
+
+######################################
 cpp = P(ulaz)
 
 prikaz(cpp)
 
+
+t = turtle.Turtle()
+def init_turtle(t):
+    t.penup()
+    t.goto(-300,300)
+    t.pen(pencolor="black", fillcolor="white", pensize=10, speed=9)
+    t.begin_fill()
+
+
+    t.pendown()
+    for i in range(4):
+        t.fd(600)
+        t.rt(90)
+    t.end_fill()
+    #t.write("fan")
+    t.penup()
+    t.home()
+    t.pendown()
+    t.pen(pencolor="black", pensize=2, speed=1)
+
+
 cpp.izvrši()
+
+turtle.getscreen()._root.mainloop()
+
