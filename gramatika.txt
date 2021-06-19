@@ -42,6 +42,13 @@ log_literal 	->  izraz <  izraz |
 					( LOGIKA )     |
 					T | F | U  | 
 					LOG_VAR |
+					not LOGIKA |
+					
+					
+
+
+A ILI not B
+A I not (A ILI B)
 
 
 

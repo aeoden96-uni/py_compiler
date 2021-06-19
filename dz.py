@@ -3,7 +3,7 @@ from vepar import *
 
 class T(TipoviTokena):
     FOR, COUT, ENDL, IF = 'for', 'cout', 'endl', 'if'
-    OOTV, OZATV, VOTV, VZATV,UOTV,UZATV, TOČKAZ = '(){}[];'
+    OOTV, OZATV, VOTV, VZATV,UOTV,UZATV,POTV,PZATV ,TOČKAZ = '(){}[]<>;'
     PLUSP, MMANJE = '++', '<<'
     NAVODNICI='"'
 
@@ -28,24 +28,30 @@ class T(TipoviTokena):
         def izvrši(self, mem): raise Prekid
 
 
-    #token za BOOL PRVA VARIJANTA 
-    #class LOGVAR(Token):
-    #    def vrijednost(self, mem): return int(self.sadržaj)
+    def getBool(integer):
+        if integer == 1:
+            return T.TRUE
+        elif integer == -1:
+            return T.FALSE 
+        elif integer == 0:
+            return T.UNDEFINED
+        else:
+            raise SintaksnaGreška("")
 
     class TRUE(Token):
         literal = 'TRUE'
-        def vrijednost(self, mem, unutar): return 'TRUE'
-        def izvrši(self, mem): return 'TRUE'
+        def vrijednost(self, mem): return 1
+        def izvrši(self,mem): return self
 
     class FALSE(Token):
         literal = 'FALSE'
-        def vrijednost(self, mem, unutar): return 'FALSE'
-        def izvrši(self, mem): return 'FALSE'
+        def vrijednost(self, mem): return -1
+        def izvrši(self,mem): return self
 
     class UNDEFINED(Token):
         literal = 'UNDEFINED'
-        def vrijednost(self, mem, unutar): return 'UNDEFINED'
-        def izvrši(self, mem): return 'UNDEFINED'
+        def vrijednost(self, mem): return 0
+        def izvrši(self,mem): return self
 
     
     #TOKENI ZA PRETVORBU TIPOVA
@@ -62,7 +68,7 @@ class T(TipoviTokena):
     class BROJ(Token):
         def vrijednost(self, mem): return int(self.sadržaj)
         def izvrši(self,mem):
-            return int(self.sadržaj)
+            return self
 
 
     
@@ -84,10 +90,10 @@ class T(TipoviTokena):
 
     class STRING(Token):
         #vraća stogod je u memoriji na mjestu IME
-        def vrijednost(self): return self.sadržaj[1:-1]
+        def vrijednost(self,mem): return self.sadržaj[1:-1]
         def izvrši(self,mem):
             #return mem[self]
-            return self.sadržaj[1:-1]
+            return self
 
 
     
@@ -215,15 +221,11 @@ class P(Parser):
         if self >= T.OZATV:
             self >> T.TOČKAZ
             return U_okolinu([funkcija])
-        elif ime:= self >= T.IME:
+        elif ime:= self >= {T.IME,T.IME_LOG}:
             self >> T.OZATV
             self >> T.TOČKAZ
             return U_okolinu([funkcija,ime])
 
-        elif ime:= self >= T.IME_LOG:
-            self >> T.OZATV
-            self >> T.TOČKAZ
-            return U_okolinu([funkcija,ime])
         else:
             izraz = self.izraz()
             self >> T.OZATV
@@ -274,27 +276,38 @@ class P(Parser):
 
     def log_literal(self):
         if self >= T.OOTV:
-            logika= self.ligika()
+            logika= self.logika()
             self >> T.OZATV
             return logika
         elif var := self >= T.TRUE:
             return var
         elif var := self >= T.FALSE:
             return var
+        elif var := self >= T.NOT:
+            logika = self.logika()
+            return NOT(logika)
+
         elif var := self >= T.UNDEFINED:
             return var
         elif var := self >= T.IME_LOG:
             return var
-        else:
+        elif self >= T.POTV:
             izraz1= self.izraz()
             if self >= T.MANJE:
                 izraz2=self.izraz()
+                self >> T.PZATV
                 return LESS([izraz1, izraz2])
 
             else:
                 self >> T.JJEDNAKO
                 izraz2=self.izraz()
+                self >> T.PZATV
                 return EQ([izraz1, izraz2])
+        else:
+            izraz1= self.izraz()
+            self >> T.JJEDNAKO
+            izraz2=self.izraz()
+            return EQ([izraz1, izraz2])
 
 
         
@@ -320,8 +333,7 @@ class P(Parser):
 
     def baza(self):
         if broj := self >= T.BROJ: return broj
-        if string := self >= T.STRING:
-            return string
+        if string := self >= T.STRING: return string
 
         elif self > T.IZ_OKOLINE:
             return self.iz_okoline()
@@ -345,7 +357,7 @@ class P(Parser):
                 self >> T.OZATV
                 u_zagradi=self.izraz()
                 return U_int(u_zagradi)
-            else:
+            else: #u zagradi
                 u_zagradi = self.izraz()
                 self >> T.OZATV
                 return u_zagradi
@@ -380,7 +392,7 @@ class Petlja(AST('varijabla početak granica inkrement blok')):
 
 class U_okolinu(AST('funkcija_logika')):
     def izvrši(self, mem):
-        r=self.funkcija_logika[1].izvrši(mem)
+        r=self.funkcija_logika[1].vrijednost(mem)
 
         print("U OKOLINU POSLANO: "+ str(r))
 
@@ -388,28 +400,35 @@ class U_okolinu(AST('funkcija_logika')):
         #    print(var.vrijednost(mem), end=' ')
         #if self.novired ^ T.ENDL:
         #     print()
+    def vrijednost(self,mem):
+        r=self.funkcija_logika[1].vrijednost(mem)
+
+        print("U OKOLINU POSLANO: "+ str(r))
+
 
 class U_int(AST('izraz')):
     def izvrši(self, mem):
-        r=self.izraz.izvrši(mem)
+        r=self.izraz.vrijednost(mem)
 
         print(r)
 
         return int(r)
-
+    def vrijednost(self,mem):
+        r=self.izraz.vrijednost(mem)
+        return int(r)
 class Grananje(AST('logika naredba')):
     def izvrši(self, mem):
-        if self.logika.vrijednost(mem) == T.TRUE:
-            self.naredba.izvrši(mem)
+        if self.logika.vrijednost(mem) == 1:
+            return self.naredba.vrijednost(mem)
 
 class Pridruzivanje(AST('varijabla izraz')):
     def izvrši(self, mem):
-        r=self.izraz.izvrši(mem)
+        r=self.izraz.vrijednost(mem)
 
         if self.varijabla.vrsta()=='IME':
             if r in [T.TRUE._name_, T.FALSE._name_,T.UNDEFINED._name_]:
                 raise GreškaIzvođenja("Can't save logic value in a regular variable.")
-            
+
         mem[self.varijabla] =r
 
 
@@ -418,19 +437,85 @@ class Iz_okoline(AST('funkcija_logika')):
         print("IZ OKOLINE DOBIVENO: 11")
         return 11
 
-class Zbroj(AST('pribrojnici')):
-    def vrijednost(izraz):
-        a, b = self.izraz.pribrojnici
-        return a.vrijednost() + b.vrijednost()
 
-    def optim(izraz):
+class LESS(AST('izrazi')):
+    def izvrši(self, mem):
+        return
+class EQ(AST('izrazi')):
+    def izvrši(self, mem):
+        a=self.izrazi[0].izvrši(mem)
+        b=self.izrazi[1].izvrši(mem)
+
+    def vrijednost(self,mem):
+        a=self.izrazi[0].vrijednost(mem)
+        b=self.izrazi[1].vrijednost(mem)
+
+        return a==b
+        
+       
+
+class OR(AST('literali')):
+    #OR(A, B) === MAX(A, B)
+    def izvrši(self, mem):
+       
+        #a=self.literali[0].izvrši(mem)
+        #b=self.literali[1].izvrši(mem)
+        
+        a=self.literali[0].vrijednost(mem)
+        b=self.literali[1].vrijednost(mem)
+
+        val= max(a,b)
+        return val
+        return a if a.vrijednost(mem) > b.vrijednost(mem) else b
+
+    def vrijednost(self, mem):
+           
+        a=self.literali[0].vrijednost(mem)
+        b=self.literali[1].vrijednost(mem)
+
+        val= max(a,b)
+        return val
+        return a if a.vrijednost(mem) > b.vrijednost(mem) else b
+
+
+        
+            
+            
+class AND(AST('literali')):
+    #AND(A, B) ===MIN(A, B)
+    def izvrši(self, mem):
+
+        a=self.literali[0].izvrši(mem)
+        b=self.literali[1].izvrši(mem)
+        val= max(a.vrijednost(mem),b.vrijednost(mem))
+        
+        return a if a.vrijednost(mem) < b.vrijednost(mem) else b
+    def vrijednost(self,mem):
+        a=self.literali[0].vrijednost(mem)
+        b=self.literali[1].vrijednost(mem)
+
+        val= min(a,b)
+        return val
+
+class NOT(AST('literal')):
+    #NOT(A) === -A
+    def izvrši(self, mem):
+        a=self.literal.izvrši(mem)
+        return T.getBool(-a)
+
+class Zbroj(AST('pribrojnici')):
+    def vrijednost(self,mem):
+        a, b = self.pribrojnici
+        return a.vrijednost(mem) + b.vrijednost(mem)
+
+    def optim(self,izraz):
         a, b = izraz.pribrojnici
         a, b = a.optim(), b.optim()
         if a == nula: return b
         elif b == nula: return a
         else: return Zbroj([a, b])
 
-    def prevedi(izraz):
+    def prevedi(self,izraz):
         for pribrojnik in izraz.pribrojnici: yield from pribrojnik.prevedi()
         yield ['ADD']
     
@@ -438,56 +523,39 @@ class Zbroj(AST('pribrojnici')):
         a=self.pribrojnici[0].izvrši(mem)
         b=self.pribrojnici[1].izvrši(mem)
         return a+b
-
-class LESS(AST('izrazi')):
-    def izvrši(self, mem):
-        return
-class EQ(AST('izrazi')):
-    def izvrši(self, mem):
-        return
-
-class OR(AST('elements')):
-    def izvrši(self, mem):
-        if self.elements[0] or  self.elements[1] :
-            return T.TRUE
-class AND(AST('faktori')):
-    def izvrši(self, mem):
-        return
-
 class Umnožak(AST('faktori')):
     def izvrši(self,mem):
         a=self.faktori[0].izvrši(mem)
         b=self.faktori[1].izvrši(mem)
-        #return a*b
-        return self.faktori[0].vrijednost(mem)*self.faktori[1].vrijednost(mem)
+        return a*b
+    def vrijednost(self,mem):
+        a=self.faktori[0].vrijednost(mem)
+        b=self.faktori[1].vrijednost(mem)
+        return a*b
 
 class Potencija(AST('baza eksponent')):
     def izvrši(self,mem):
-        return self.baza.vrijednost(mem)**self.eksponent.vrijednost(mem)
+        a=self.baza.izvrši(mem)
+        b=self.eksponent.izvrši(mem)
+        return a**b
+        
 
 
 ######################################
 
 ulaz ='''\
 
-v=2 + $getTemp() ;
-
-z=5;
-Z = FALSE or TRUE;
-
-
-#ispisi(Z);
-
-
-
+for (i=0 ; i < 5 ;i ++)
+if( i == 2 or i == 4)
+    #ispisi(i);
 
 '''
-#print(ulaz)
+print(ulaz)
 P.tokeniziraj(ulaz)
 ######################################
 
 cpp = P(ulaz)
 
-#prikaz(cpp)
+prikaz(cpp)
 
 cpp.izvrši()
