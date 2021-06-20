@@ -1,9 +1,9 @@
-VRSTE VARIJABLI =>  LOG_VAR i DEF_VAR
+VRSTE VARIJABLI =>  LOG_VAR i DEF_VAR i LIST_VAR
 
 
 
-START 			-> NAREDBA VIŠE
-VIŠE  			-> NAREDBA VIŠE | ''
+START 			-> 	NAREDBA VIŠE
+VIŠE  			-> 	NAREDBA VIŠE | ''
 
 NAREDBA 		-> 	PETLJA |
 					GRANANJE |
@@ -12,106 +12,99 @@ NAREDBA 		-> 	PETLJA |
 					PRIDRUZIVANJE ;|
 					KOMPREHENZIJA ;
 
-PETLJA 			-> FOR NAREDBA | FOR { VIŠE } | 
-				   FOREACH NAREDBA | FOREACH { VIŠE }
+PETLJA 			-> 	FOR NAREDBA | FOR { VIŠE } | 
+					FOREACH NAREDBA | FOREACH { VIŠE }
 
-FOR     		-> for( DEF_VAR# =  BROJ ; DEF_VAR# < BROJ ; DEF_VAR# INCR)
-FOREACH 		-> foreach DEF_VAR# in LISTA
+FOR     		-> 	for( DEF_VAR# =  TO_BROJ ; DEF_VAR# < TO_BROJs ; DEF_VAR# INCR)
 
-INCR 			-> ++ | +BROJ
+FOREACH 		-> 	foreach DEF_VAR# in LISTA
 
-#KOMPREHENZIJA 	->  DEF_VAR OPER_PRIDRUZ [ aritm_operacija FOREACH ] |
-#				  [ izraz FOREACH ]	
+INCR 			-> 	++ | +TO_BROJ
 
-PIŠI 			->  #U_OKOLINU ( izraz ) 
+PIŠI 			->  U_OKOLINU_prva ( izraz ) |
+					U_OKOLINU_druga( logika) |
+					U_OKOLINU_treca( izraz) ...
 
-ČITAJ 			-> $IZ_OKOLINE( ) | $IZ_OKOLINE ( BOOL )
+ČITAJ 			-> 	IZ_OKOLINE_prva ( ) | 
+					IZ_OKOLINE_druga ( logika ) |
+					IZ_OKOLINE_treca ( izraz ) ...
 
-GRANANJE 		-> 	if( LOGIKA ) { VIŠE }<- jos ne zagrade
+GRANANJE 		-> 	if( LOGIKA ) { VIŠE }  |
+					if( LOGIKA ) NAREDBA
 
-PRIDRUZIVANJE 	->	DEF_VAR OPER_PRIDRUZ    DEF_VAR |               <-visak?    
-					DEF_VAR OPER_PRIDRUZ    izraz   |
-					DEF_VAR OPER_PRIDRUZ    $fja   |
-					LOG_VAR OPER_PRIDRUZ 	LOGIKA    <- moze biti tu i read fja
-				 
+
+PRIDRUZIVANJE 	->	DEF_VAR 	OPER_PRIDRUZ    izraz   |    
+					LOG_VAR 	OPER_PRIDRUZ 	LOGIKA       
+					LIST_VAR 	OPER_PRIDRUZ 	LISTA |
+					DEF_VAR,...,DEF_VAR = LISTA |
+					DEF_VAR,...,DEF_VAR = LIST_VAR  					
 		 		 
-LOGIKA 			->	KONJ ILI LOGIKA | KONJ
-KONJ  			->  log_literal I KONJ      | log_literal
+LOGIKA 			->	KONJ ILI LOGIKA | 
+					KONJ
+
+KONJ  			->  log_literal I KONJ | 
+					log_literal
+
 log_literal 	->  izraz <  izraz | 
 					izraz == izraz |
-					( LOGIKA )     |
-					T | F | U  | 
+					( LOGIKA )     | 
 					LOG_VAR |
 					not LOGIKA |
+					TO_BOOL |
+					FROM_LIST
 					
+TO_BROJ 		->  ( int ) izraz |
+					( int ) logika |
+					BROJ
+
+TO_STRING		->  (string)izraz |
+					(string)logika|
+					STRING
+
+TO_BOOL 		->  (bool)izraz |
+					(bool)logika |
+					T | F | U
+
+izraz 			-> 	član PLUS izraz | 
+					član MINUS izraz | 
+					MINUS izraz |
+					član 
 					
-
-
-A ILI not B
-A I not (A ILI B)
-
-
-
-#aritm operacije= 2 tipa varijabli + LISTE		
-izraz 			-> 	član PLUS izraz | član MINUS izraz | član
 član 			-> 	faktor PUTA član | faktor KROZ član |faktor
+
 faktor 			-> 	baza NA faktor | baza 
-baza 			-> 	BROJ | 	
-					(tip)izraz | 
-					$IZ_OKOLINE( ) | 
-					DEF_VAR | 
-					( izraz )	   
+
+baza 			-> 	( izraz )  |
+					ČITAJ      | 
+					DEF_VAR    | 
+					TO_STRING  |
+					TO_BROJ	|
+					FROM_LIST
+					
 				 
-				
-#liste	DODATI KASNIJE
-element 		-> BROJ | LISTA | izraz
-LISTA 			-> UOTV elementi UZATV
-elementi 		-> element | element ZAREZ elementi | ''
+element 		-> 	LISTA | 
+					izraz |
+					logika
+LISTA 			-> 	[ elementi ]
+elementi 		-> 	element | element ZAREZ elementi
+
+FROM_LIST		->  LISTA[TO_BROJ]  |
+					LIST_VAR[TO_BROJ]
+					
+
+
 
 ####################################################
 
 #DODATI:
 -KOMPREHENZIJE
 		kubovi = [i**3 for i in [1,2,3,4] if i < 2]
-		
--FJE KOJE SALJU U OKOLINU
 
--LISTE 
+*dodati
+KOMPREHENZIJA 	->  DEF_VAR OPER_PRIDRUZ [ izraz FOREACH ]
+*dodati izraze unutar lista
 
--ARITMETIKU
-
-#ARITMETIKA
-# izraz -> član PLUS izraz | član MINUS izraz | član
-# član -> faktor PUTA član | faktor KROZ član |faktor
-# faktor -> baza NA faktor | baza | MINUS faktor ???
-# baza -> BROJ | OTVORENA izraz ZATVORENA
-
-primjer
-(2+3)*4^1
-
-
-#ARITMETIKA KOMPL
-# start -> izraz STRELICA IME start | izraz
-# izraz -> izraz PLUS član | izraz MINUS član | član
-# član -> član PUTA faktor | član KROZ faktor | faktor
-# faktor -> baza NA faktor | baza | MINUS faktor 
-# baza -> BROJ | IME | I | OTV izraz ZATV | baza KONJ
-
-primjer
-f'''\
-    8 -> d
-    10^d -> n
-    (1+1/n)^n -> e
-    {pi} -> pi
-    e^(i*pi) + 1 -> skoro0
-    skoro0
-'''
-
-
-#LISTE stringova
-# element -> BROJ | lista
-# lista -> UOTV elementi UZATV
-# elementi -> element | element ZAREZ elementi | ''
-
-primjer
-[23, "ab\"c]", 'a[]', [2, 3, ], 523, [1,2,2,3],'"', '\'', "\e", "\\", '']
+temp[temp!=1]=0
+temp[:] = [0 if ele != 1 else ele for ele in temp ]
+temp = [1,2,3,4,5,6]
+[int(x == 1) for x in temp]

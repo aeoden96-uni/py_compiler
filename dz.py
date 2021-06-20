@@ -490,7 +490,7 @@ class U_okolinu(AST('funkcija_logika')):
         elif self.funkcija_logika[0] ^ T.U_OKOLINU_ROTATION:
             print("U okolinu dan rotation: " + str(r))
             t.left(r)
-            t.write(r)
+            #t.write(r)
             return r
         elif self.funkcija_logika[0] ^ T.U_OKOLINU_STEPS:
             print("U okolinu dani steps: " + str(r))
@@ -626,13 +626,8 @@ rot = 30;
 
 setPower(TRUE);
 for (i=0; i < 20 ; i++){
-
-    
-
     setSteps(50);
     setRot(rot);
-
-    
 
     if (i == 10) rot = 20 + rot;
     if (i == 15) setPower(FALSE);
@@ -674,7 +669,7 @@ def init_turtle(t):
     t.pendown()
     t.pen(pencolor="black", pensize=2, speed=1)
 
-
+init_turtle(t)
 cpp.izvrši()
 
 turtle.getscreen()._root.mainloop()
