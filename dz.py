@@ -712,9 +712,6 @@ for (i=0; i < 20 ; i++){
 setSteps(200);
 setRot(30);
 
-
-
-
 '''
 
 ulaz ='''\
@@ -726,20 +723,21 @@ v,p = L;
 
 setSpeed(p+c);
 
-
 '''
+
+
 print(ulaz)
 P.tokeniziraj(ulaz)
 
 
 ######################################
-cpp = P(ulaz)
-
-prikaz(cpp)
-
-
-#t = turtle.Turtle()
+#turtle grafika nam treba kod kompleksnijih primjera
+# set***() funkcije  salju komande robotu
+# get***() dobivaju  dobivaju komande iz okoline i spremaju se u var
+######################################
 def init_turtle(t):
+    #inits the screen and walls
+       
     t.penup()
     t.goto(-300,300)
     t.pen(pencolor="black", fillcolor="white", pensize=10, speed=9)
@@ -757,8 +755,17 @@ def init_turtle(t):
     t.pendown()
     t.pen(pencolor="black", pensize=2, speed=1)
 
-#init_turtle(t)
+cpp = P(ulaz)
+
+prikaz(cpp)
+
+t = turtle.Turtle()
+
+init_turtle(t)
 cpp.izvrši()
 
-#turtle.getscreen()._root.mainloop()
+t.getscreen()._root.mainloop()
+
+
+
 
