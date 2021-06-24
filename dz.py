@@ -1,6 +1,7 @@
 from vepar import *
 import turtle
 from time import sleep
+from inspect import signature
 
 
 class T(TipoviTokena):
@@ -8,7 +9,7 @@ class T(TipoviTokena):
     OOTV, OZATV, VOTV, VZATV,UOTV,UZATV,POTV,PZATV ,TOČKAZ = '(){}[]<>;'
     PLUSP, MMANJE = '++', '<<'
     NAVODNICI='"'
-
+    ZAREZ= ','
     #OPERATORI_PRIDRUZIVANJA
     PLUSJ,JEDNAKO = '+=','='
 
@@ -84,6 +85,13 @@ class T(TipoviTokena):
         #vraća stogod je u memoriji na mjestu IME
         def vrijednost(self, mem): return mem[self]
         def vrsta(self): return 'IME_LOG'
+        def izvrši(self,mem):
+            return mem[self]
+
+    class IME_LISTA(Token):
+        #vraća stogod je u memoriji na mjestu IME
+        def vrijednost(self, mem): return mem[self]
+        def vrsta(self): return 'IME_LISTA'
         def izvrši(self,mem):
             return mem[self]
 
@@ -184,9 +192,14 @@ def cpp(lex):
             lex >> '"'
             yield lex.token(T.STRING)
 
+        elif znak == 'L':
+            lex.zvijezda(identifikator)
+            yield lex.literal(T.IME_LISTA)
+
         elif znak.isalpha() and znak.isupper():
             lex.zvijezda(identifikator)
             yield lex.literal(T.IME_LOG)
+            
         elif znak.isalpha():
             lex.zvijezda(identifikator)
             yield lex.literal(T.IME)
@@ -211,9 +224,10 @@ class P(Parser):
     def naredba(self):
         if self > T.FOR: return self.petlja()
         elif self > T.IF: return self.grananje()
-        elif self > T.IME: return self.pridruzivanje()
-        elif self > T.IME_LOG: return self.pridruzivanje()
-        elif self > { T.U_OKOLINU_SPEED,T.U_OKOLINU_STEPS,T.U_OKOLINU_POWER,T.U_OKOLINU_ROTATION}: return self.u_okolinu()
+        elif self > {T.IME,T.IME_LOG,T.IME_LISTA}: 
+            return self.pridruzivanje()
+        elif self > { T.U_OKOLINU_SPEED,T.U_OKOLINU_STEPS,T.U_OKOLINU_POWER,T.U_OKOLINU_ROTATION}: 
+            return self.u_okolinu()
         elif br := self >> T.BREAK:
             self >> T.TOČKAZ
             return br
@@ -287,17 +301,52 @@ class P(Parser):
 
     def pridruzivanje(self):
         if lijevo := self >= T.IME:
-            self >> T.JEDNAKO
-            izraz=self.izraz()
-            self >> T.TOČKAZ
-            return Pridruzivanje(lijevo,izraz)
-        else:
-            lijevo = self >> T.IME_LOG
+            #ako je obicno pridruzivanje
+            if self >= T.JEDNAKO:
+                izraz=self.izraz()
+                self >> T.TOČKAZ
+                return Pridruzivanje(lijevo,izraz)
+            else:
+                el = [lijevo]
+                while self>=T.ZAREZ: 
+                    novi= self >>  T.IME
+                    el.append(novi)
+                self >> T.JEDNAKO
+                if lista := self >= T.IME_LISTA:
+                    pass
+                else:
+                    lista=self.lista()
+                self >> T.TOČKAZ
+                return Pridruzivanje_liste(el,lista)
+
+        elif lijevo := self >= T.IME_LOG:
             self >> T.JEDNAKO
             logika=self.logika()
             self >> T.TOČKAZ
             return Pridruzivanje(lijevo,logika)
+        elif lijevo :=  self >> T.IME_LISTA:
+            self >> T.JEDNAKO
+            lista=self.lista()
+            self >> T.TOČKAZ
+            return Pridruzivanje(lijevo,lista)
+        else:
+            pass
+            
+   
 
+
+    def lista(self):
+        if self >= T.UOTV:
+            if self >= T.UZATV: return Lista([])
+            el = [self.lista()]
+            while self>=T.ZAREZ and not self>T.UZATV: el.append(self.lista())
+            self >> T.UZATV
+            return Lista(el)
+        else: 
+            
+            #return self >> {T.BROJ}
+            return self.izraz()
+    
 
     def logika(self):
         prvi = self.konj()
@@ -433,6 +482,11 @@ class Petlja(AST('varijabla početak granica inkrement blok')):
             mem[kv] += inkr 
 
 
+class Lista(AST('elementi')):
+    def vrijednost(self,mem): 
+        print("u vrijednosti od Lista")
+        return [el.vrijednost() for el in self.elementi]
+
 
 class U_int(AST('izraz')):
     def izvrši(self, mem):
@@ -450,10 +504,30 @@ class Grananje(AST('logika naredba')):
         if self.logika.vrijednost(mem) == 1:
             return self.naredba.vrijednost(mem)
 
+class Pridruzivanje_liste(AST('varijable lista')):
+    def izvrši(self, mem):
+      
+        if self.lista ^ T.IME_LISTA:
+            l=self.lista.vrijednost(mem) 
+        else:
+            l=self.lista[0]
+
+
+        for (var,list_elm) in zip(self.varijable, l):
+            #print(var)
+            mem[var] =list_elm.vrijednost(mem)
+    def vrijednost(self, mem):
+        #NE POKRECE SE
+        pass
+
+
 class Pridruzivanje(AST('varijabla izraz')):
     def izvrši(self, mem):
-        r=self.izraz.vrijednost(mem)
-
+        if self.varijabla.vrsta()=='IME_LISTA':
+            r=self.izraz.elementi
+        else:
+            r=self.izraz.vrijednost(mem)
+        
         if self.varijabla.vrsta()=='IME':
             if r in [T.TRUE._name_, T.FALSE._name_,T.UNDEFINED._name_]:
                 raise GreškaIzvođenja("Can't save logic value in a regular variable.")
@@ -467,6 +541,8 @@ class Pridruzivanje(AST('varijabla izraz')):
                 raise GreškaIzvođenja("Can't save logic value in a regular variable.")
 
         mem[self.varijabla] =r
+
+
 class U_okolinu(AST('funkcija_logika')):
     def izvrši(self, mem):
         self.vrijednost(mem)
@@ -619,7 +695,7 @@ class Potencija(AST('baza eksponent')):
 
 ######################################
 
-ulaz ='''\
+ulaz2 ='''\
 
 
 rot = 30;
@@ -640,6 +716,18 @@ setRot(30);
 
 
 '''
+
+ulaz ='''\
+
+c= 3;
+L = [ 20 + 4 , 20 + 6 ];
+
+v,p = L;
+
+setSpeed(p+c);
+
+
+'''
 print(ulaz)
 P.tokeniziraj(ulaz)
 
@@ -650,7 +738,7 @@ cpp = P(ulaz)
 prikaz(cpp)
 
 
-t = turtle.Turtle()
+#t = turtle.Turtle()
 def init_turtle(t):
     t.penup()
     t.goto(-300,300)
@@ -669,8 +757,8 @@ def init_turtle(t):
     t.pendown()
     t.pen(pencolor="black", pensize=2, speed=1)
 
-init_turtle(t)
+#init_turtle(t)
 cpp.izvrši()
 
-turtle.getscreen()._root.mainloop()
+#turtle.getscreen()._root.mainloop()
 
