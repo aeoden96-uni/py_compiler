@@ -79,7 +79,7 @@ baza 			-> 	( izraz )  |
 					DEF_VAR    | 
 					TO_STRING  |
 					TO_BROJ	|
-					FROM_LIST
+					FROM_LIST          
 					
 				 
 element 		-> 	LISTA | 
@@ -88,22 +88,35 @@ element 		-> 	LISTA |
 LISTA 			-> 	[ elementi ]
 elementi 		-> 	element | element ZAREZ elementi
 
-FROM_LIST		->  LISTA[TO_BROJ]  |
+FROM_LIST		->  LISTA[TO_BROJ]  |                             <-DOHVACANJE.. ak cemo imat vremena,neznam jel moze bit LISTA ili samo LIST_VAR
 					LIST_VAR[TO_BROJ]
 					
+					
+					
+ZA DODATI:
+####################################################
 
 
+DICTIONARY      -> {  elementi_dict }
+
+elementi_dict   -> element_dict  | element_dict ZAREZ elementi_dict       
+
+element_dict    ->  TO_STRING : DICTIONARY |
+					TO_STRING : izraz |
+					TO_STRING : logika
 
 ####################################################
 
-#DODATI:
 -KOMPREHENZIJE
 		kubovi = [i**3 for i in [1,2,3,4] if i < 2]
 
-*dodati
-KOMPREHENZIJA 	->  DEF_VAR OPER_PRIDRUZ [ izraz FOREACH ]
-*dodati izraze unutar lista
 
+KOMPREHENZIJA 	->  DEF_VAR OPER_PRIDRUZ [ izraz FOREACH ]
+
+
+####################################################
+dodati izraze unutar lista
+npr.
 temp[temp!=1]=0
 temp[:] = [0 if ele != 1 else ele for ele in temp ]
 temp = [1,2,3,4,5,6]
