@@ -16,7 +16,7 @@ class T(TipoviTokena):
     
 
     #OPERATORI
-    PLUS,PUTA,NA='+*^'
+    PLUS,PUTA,NA,MINUS,DJELJENO='+*^-/'
 
     #OPERATORI_USPOREDBE
     JJEDNAKO,MANJE = '==','<'
@@ -417,12 +417,16 @@ class P(Parser):
         if self >= T.PLUS:
             drugi = self.izraz()
             return Zbroj([prvi, drugi])
+        elif self >= T.MINUS:
+            drugi = self.izraz()
+            return Minus([prvi, drugi])
         else:
             return prvi
 
     def član(self):
         faktor = self.faktor()
         if self >= T.PUTA: return Umnožak([faktor, self.član()])
+        elif self >= T.DJELJENO: return Količnik([faktor, self.član()])
         else: return faktor
 
     def faktor(self):
@@ -689,10 +693,66 @@ class Umnožak(AST('faktori')):
         a=self.faktori[0].izvrši(mem)
         b=self.faktori[1].izvrši(mem)
         return a*b
+
+    def optim(self,izraz):
+        a, b = izraz.faktori
+        a, b = a.optim(), b.optim()
+        if a == jedan: return b
+        elif b == jedan: return a
+        elif nula in {a, b}: return nula
+        else: return Umnožak([a, b])
+
+    def prevedi(self,izraz):
+        for faktor in izraz.faktori: yield from faktor.prevedi()
+        yield ['MUL']
+
     def vrijednost(self,mem):
         a=self.faktori[0].vrijednost(mem)
         b=self.faktori[1].vrijednost(mem)
         return a*b
+
+class Minus(AST('pribrojnici')):
+    def vrijednost(self,mem):
+        a, b = self.pribrojnici
+        return a.vrijednost(mem) - b.vrijednost(mem)
+
+    def optim(self,izraz):
+        a, b = izraz.pribrojnici
+        a, b = a.optim(), b.optim()
+        if a == nula: return -b               # ?
+        elif b == nula: return a
+        else: return Minus([a, b])
+
+    def prevedi(self,izraz):
+        for pribrojnik in izraz.pribrojnici: yield from pribrojnik.prevedi()
+        yield ['SUB']                         # ?
+    
+    def izvrši(self,mem):
+        a=self.pribrojnici[0].izvrši(mem)
+        b=self.pribrojnici[1].izvrši(mem)
+        return a-b
+
+class Količnik(AST('faktori')):
+    def izvrši(self,mem):
+        a=self.faktori[0].izvrši(mem)
+        b=self.faktori[1].izvrši(mem)
+        return a/b
+
+    def optim(self,izraz):
+        a, b = izraz.faktori
+        a, b = a.optim(), b.optim()
+        if a == nula: return nula
+        elif b == jedan: return a
+        else: return Količnik([a, b])
+
+    def prevedi(self,izraz):
+        for faktor in izraz.faktori: yield from faktor.prevedi()
+        yield ['DIV']
+
+    def vrijednost(self,mem):
+        a=self.faktori[0].vrijednost(mem)
+        b=self.faktori[1].vrijednost(mem)
+        return a/b
 
 class Potencija(AST('baza eksponent')):
     def izvrši(self,mem):
