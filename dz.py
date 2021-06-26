@@ -208,6 +208,14 @@ def cpp(lex):
             lex.prirodni_broj(znak)
             yield lex.token(T.BROJ)
 
+        #nakon / će odmah slijediti *
+        elif znak == '/':
+            lex >> '*'
+            while not lex >= '*':
+                lex.zanemari()
+            lex >> '/'
+            lex.zanemari()
+
         else: yield lex.literal(T)
 
 #DONE
