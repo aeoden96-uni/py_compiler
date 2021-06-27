@@ -7,7 +7,7 @@ https://github.com/aeoden96/IP_zadaca
 Matija Fabek
 Mateo Martinjak 
 ```
-## Functions 
+## Environment functions: they are implemented in Turtle,  their implementation should function as a 'black box' to the user 
 
 
 Function | To/from environment | Description | Example
