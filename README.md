@@ -7,6 +7,18 @@ https://github.com/aeoden96/IP_zadaca
 Matija Fabek
 Mateo Martinjak 
 ```
+## Functions 
+
+
+Function | To/from environment | Description | Example
+------------ | ------------- | ------------- | -------------
+getCoord | FROM | gets list with x,y coords | ``` x,y= getCoord();```
+getOrientation | FROM | get orientation | ``` r=getOrientation();```
+setPower | TO | sets turtle power | ```setPower(TRUE); ```
+setSpeed | TO | sets turtle speed  | ```setSpeed(2); ```
+setSteps | TO | sets turtle steps | ```setSteps(50); ```
+setRot | TO | sets turtle rotation | ```setRot(rot); ```
+
 ## Literals
 
 
@@ -106,4 +118,32 @@ print(L[0]);
 //Ispisujem: 26
 //Ispisujem: 4
 //Ispisujem: 24
+```
+
+5. Tutle example
+
+```cpp
+print("program pocinje s radom");
+rot = 90;
+x,y= getCoord();
+r=getOrientation();
+
+
+setPower(TRUE);
+setSpeed(2);
+
+for (i=0; i < 8 ; i++){
+    
+    
+    x,y= getCoord();
+    r=getOrientation();
+
+    setSteps(50);
+    setRot(rot);
+
+    if (i == 4) rot =  rot-45;
+    if (i == 4) break;
+}
+
+print("program gotov s radom");
 ```
