@@ -71,7 +71,17 @@ print(d);
 //Ispisujem: 1
 ```
 
-4.a Simple list and conversion 'LIST -> variables'
+4.a Simple list 
+```cpp
+
+Lot = [4,8];
+
+if (4 in Lot)
+    print("T");
+
+//Ispisujem: T
+```   
+4.b List conversion 'LIST -> variables'
 
 ```cpp
 
@@ -87,8 +97,11 @@ print(p);
 v,p = [2,4];
 print(p);
 
+print(L[0]);
+
 //IZ OKOLINE DOBIVENE koordinate: [2,15]
 //Ispisujem: 15
 //Ispisujem: 26
 //Ispisujem: 4
+//Ispisujem: 24
 ```
