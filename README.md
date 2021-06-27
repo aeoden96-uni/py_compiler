@@ -5,6 +5,27 @@
 Matija Fabek
 Mateo Martinjak 
 ```
+## Literals
+
+
+Name | Real value
+------------ | -------------
+TRUE | 1
+UNDEFINED | 0
+FALSE | -1
+
+
+## Variable types
+
+Type name | Holds | Description | Example
+------------ | ------------- | ------------- | -------------
+int | integer | starts with a small letter | ``` c= 2;```
+string | string | starts with a small letter | ``` c= "id";```
+bool | integer | 3val logic,starts with capital letter | ```R= UNDEFINED; ```
+list | list | starts with capital letter 'L' | ```L1 = [1,2,3]; ```
+
+
+
 ## Examples
 
 1. Arithmetic
