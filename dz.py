@@ -879,7 +879,7 @@ r=getOrientation();
 
 
 setPower(TRUE);
-setSpeed(9);
+setSpeed(2);
 
 for (i=0; i < 8 ; i++){
     
