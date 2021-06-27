@@ -51,7 +51,8 @@ log_literal 	->  izraz <  izraz |
 					LOG_VAR |
 					not LOGIKA |
 					TO_BOOL |
-					FROM_LIST
+					FROM_LIST |
+					izraz IN lista
 					
 TO_BROJ 		->  ( int ) izraz |
 					( int ) logika |
@@ -88,14 +89,14 @@ element 		-> 	LISTA |
 LISTA 			-> 	[ elementi ]
 elementi 		-> 	element | element ZAREZ elementi
 
-FROM_LIST		->  LISTA[TO_BROJ]  |                             <-DOHVACANJE.. ak cemo imat vremena,neznam jel moze bit LISTA ili samo LIST_VAR
+FROM_LIST		->  LISTA[TO_BROJ]  |                          
 					LIST_VAR[TO_BROJ]
 					
 					
 					
 ZA DODATI:
 ####################################################
-
+DICTIONARY:
 
 DICTIONARY      -> {  elementi_dict }
 
@@ -106,9 +107,11 @@ element_dict    ->  TO_STRING : DICTIONARY |
 					TO_STRING : logika
 
 ####################################################
+KOMPREHENZIJE:
 
--KOMPREHENZIJE
-		kubovi = [i**3 for i in [1,2,3,4] if i < 2]
+
+npr. 
+kubovi = [i**3 for i in [1,2,3,4] if i < 2]
 
 
 KOMPREHENZIJA 	->  DEF_VAR OPER_PRIDRUZ [ izraz FOREACH ]

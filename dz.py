@@ -5,7 +5,7 @@ from inspect import signature
 
 
 class T(TipoviTokena):
-    FOR, COUT, ENDL, IF = 'for', 'cout', 'endl', 'if'
+    FOR, COUT, ENDL, IF,IN = 'for', 'cout', 'endl', 'if','in'
     OOTV, OZATV, VOTV, VZATV,UOTV,UZATV,POTV,PZATV ,TOČKAZ = '(){}[]<>;'
     PLUSP, MMANJE = '++', '<<'
     NAVODNICI='"'
@@ -112,9 +112,9 @@ class T(TipoviTokena):
 
 
     #FJE KOJE DOLAZE IZ OKOLINE POCINJU S $
-    class IZ_OKOLINE_DIST(Token):
+    class IZ_OKOLINE_ORI(Token):
         #get distance from the wall
-        literal = 'getDistance'
+        literal = 'getOrientation'
         def izvrši(self, mem): return mem[self]
         def vrijednost(self, mem): return mem[self]
     
@@ -124,16 +124,10 @@ class T(TipoviTokena):
         def izvrši(self, mem): return mem[self]
         def vrijednost(self, mem): return mem[self]
     
-    class IZ_OKOLINE_POWER(Token):
-        literal = 'getPower'
-        def izvrši(self, mem): return mem[self]
-        def vrijednost(self, mem): return mem[self]
+    
 
 
-    class IZ_OKOLINE_SPEED(Token):
-        literal = 'getSpeed'
-        def izvrši(self, mem): return mem[self]
-        def vrijednost(self, mem): return mem[self]
+    
 
     
     #FJE KOJE IDU U OKOLINU POCINJU S #
@@ -171,64 +165,50 @@ class T(TipoviTokena):
 def cpp(lex):
     for znak in lex:
         
-        #zanemari prazan ZNAK, predi na iduci
         if znak.isspace(): lex.zanemari()
 
-        #ako je trenutni plus
         elif znak == '+':
-            #ako je i iduci '+' procitaj ga i sve strpaj u PLUSP
             if lex >= '+': yield lex.token(T.PLUSP)
-            #ako je i iduci '=' procitaj ga i sve strpaj u PLUSP
             elif lex >= '=': yield lex.token(T.PLUSJ)
-            
-            #raisea LeksičkaGreška s porukom
-            #else: raise lex.greška('u ovom jeziku nema samostalnog +')
             else: yield lex.token(T.PLUS)
       
         elif znak == '<': yield lex.token(T.MMANJE if lex >= '<' else T.MANJE)
-       
         elif znak=='=': yield lex.token(T.JJEDNAKO if lex >= '=' else T.JEDNAKO)
         
-        #elif znak=='#':
-        #    lex.zvijezda(identifikator)
-        #    yield lex.literal(T.U_OKOLINU)
-
-        #elif znak=='$':
-        #   yield lex.literal(T)
-        
+        #PREPOZNAJE "neki string"
         elif znak== '"':
-            
             lex.pročitaj_do('"')
-            #lex.zvijezda(identifikator)
-            #lex >> '"'
             yield lex.token(T.STRING)
 
+        #PREPOZNAJE LISTNU VARIJABLU (pocinje Velikim slovom L) 
         elif znak == 'L':
             lex.zvijezda(identifikator)
             yield lex.literal(T.IME_LISTA)
 
+        #PREPOZNAJE LOGICKU VARIJABLU (pocinje Velikim slovom) 
         elif znak.isalpha() and znak.isupper():
             lex.zvijezda(identifikator)
             yield lex.literal(T.IME_LOG)
-            
+
+        #PREPOZNAJE OBICNU VARIJABLU     
         elif znak.isalpha():
             lex.zvijezda(identifikator)
             yield lex.literal(T.IME)
 
+        #PREPOZNAJE BROJ
         elif znak.isdecimal():
             lex.prirodni_broj(znak)
             yield lex.token(T.BROJ)
 
-        #nakon / će odmah slijediti *
+        #PREPOZNAJE JEDNOLINIJSKI KOMENTAR
         elif znak == '/':
             if lex  >= '/':
                 lex.pročitaj_do('\n')
                 lex.zanemari()
                 
-
         else: yield lex.literal(T)
 
-#DONE
+
 #####################################################################
 
 class P(Parser):
@@ -277,7 +257,7 @@ class P(Parser):
         
 
     def iz_okoline(self):
-        fn=self >> {T.IZ_OKOLINE_COORD,T.IZ_OKOLINE_DIST,T.IZ_OKOLINE_SPEED,T.IZ_OKOLINE_POWER}
+        fn=self >> {T.IZ_OKOLINE_COORD,T.IZ_OKOLINE_ORI}
         self >> T.OOTV
         self >>T.OZATV
 
@@ -305,11 +285,7 @@ class P(Parser):
             self >> T.TOČKAZ
             return U_okolinu([f,izraz])
 
-        
-
-       
-
-    #OK
+    
     def grananje(self):
         self >> T.IF, self >> T.OOTV
         logika = self.logika()
@@ -357,8 +333,6 @@ class P(Parser):
         else:
             pass
             
-   
-
 
     def lista(self):
         if self >= T.UOTV:
@@ -390,41 +364,34 @@ class P(Parser):
         else: 
             return log_literal
 
+
     def log_literal(self):
+        
         if self >= T.OOTV:
+            #ako je upis pocinje s  '(BOOL)...'
+            if self >= T.BOOL_TIP:
+                self >> T.OZATV
+                izraz= self.izraz()
+                return U_bool(izraz)
+
+            #ako je upis pocinje s '(..logika...)    
             logika= self.logika()
             self >> T.OZATV
             return logika
-        elif var := self >= T.TRUE:
-            return var
-        elif var := self >= T.FALSE:
-            return var
-        #elif var := self >= T.NOT:
-        #    logika = self.logika()
-        #    return NOT(logika)
 
-        elif var := self >= T.UNDEFINED:
+        #ako je literal T,U,F
+        elif var := self >= {T.TRUE,T.FALSE,T.UNDEFINED,T.IME_LOG}:
             return var
-        elif var := self >= T.IME_LOG:
-            return var
-        elif self >= T.POTV:
-            izraz1= self.izraz()
-            if self >= T.MANJE:
-                izraz2=self.izraz()
-                self >> T.PZATV
-                return LESS([izraz1, izraz2])
 
-            else:
-                self >> T.JJEDNAKO
-                izraz2=self.izraz()
-                self >> T.PZATV
-                return EQ([izraz1, izraz2])
 
         elif self >= T.NOT:
             #NOT
-
+            
+            #Ako iza not nije zagrada
             if drugi :=self >= {T.IME_LOG,T.TRUE,T.FALSE,T.UNDEFINED}:
                 return NOT(drugi)
+
+            #ako je zagrada
             else:
                 self >> T.OOTV
                 u_zagradi = self.logika()
@@ -432,13 +399,21 @@ class P(Parser):
                 return NOT(logika)
 
         else:
+            #jedino preostaje ako literal pocinje s izrazom
             izraz1= self.izraz()
-            self >> T.JJEDNAKO
-            izraz2=self.izraz()
-            return EQ([izraz1, izraz2])
-
-
-        
+            if self >= T.JJEDNAKO:
+                izraz2=self.izraz()
+                return EQ([izraz1, izraz2])
+            elif self >= T.MANJE:
+                izraz2=self.izraz()
+                return LESS([izraz1, izraz2])
+            elif self >= T.IN:
+                if lista := self >= T.IME_LISTA:
+                    pass
+                else:
+                    lista=self.lista()
+                return In(izraz1,lista)
+   
 
     def izraz(self):
         
@@ -469,11 +444,18 @@ class P(Parser):
         if broj := self >= T.BROJ: return broj
         if string := self >= T.STRING: return string
 
-        elif self > {T.IZ_OKOLINE_SPEED,T.IZ_OKOLINE_POWER,T.IZ_OKOLINE_DIST,T.IZ_OKOLINE_COORD}:
+        #ako se tu nalazi neka fja. koja nesto vraca iz okoline
+        elif self > {T.IZ_OKOLINE_ORI,T.IZ_OKOLINE_COORD}:
             return self.iz_okoline()
 
         elif ime:= self >= T.IME:
             return ime
+        #ako se nalazi ime liste, onda dohvati na mjestu 'izraz' vrijednost tj. listVar[izraz]
+        elif ime_liste:= self >= T.IME_LISTA:
+            self >> T.UOTV
+            izraz=self.izraz()
+            self >> T.UZATV
+            return Dohvat_liste(ime_liste,izraz)
         
             
         elif log := self >= T.TRUE:
@@ -496,6 +478,7 @@ class P(Parser):
 
 
         elif self >> T.OOTV: 
+            #ako je iduci token '(' , jedino moze biti promjena tipa ili '(izraz)'
             
             if tip :=self >= T.INT_TIP:
                 #PROMJENA TIPA U int
@@ -518,6 +501,8 @@ class P(Parser):
                     u_zagradi = self.izraz()
                     self >> T.OZATV
                     return U_string(u_zagradi)
+
+            
             else: 
                 #u zagradi
                 u_zagradi = self.izraz()
@@ -529,7 +514,6 @@ class Prekid(NelokalnaKontrolaToka): """Signal koji šalje naredba break."""
 
 
 
-#DONE
 #####################################################################
 
 
@@ -553,12 +537,10 @@ class Petlja(AST('varijabla početak granica inkrement blok')):
             else: inkr = inkr.vrijednost(mem)
             mem[kv] += inkr 
 
-
 class Lista(AST('elementi')):
     def vrijednost(self,mem): 
         print("u vrijednosti od Lista")
         return [el.vrijednost() for el in self.elementi]
-
 
 class U_int(AST('izraz')):
     def izvrši(self, mem):
@@ -579,6 +561,18 @@ class U_string(AST('izraz')):
     def vrijednost(self,mem):
         r=self.izraz.vrijednost(mem)
         return str(r)
+
+class U_bool(AST('izraz')):
+    def izvrši(self, mem):
+        r=self.izraz.vrijednost(mem)
+        print(r)
+        return int(r)
+    def vrijednost(self,mem):
+        r=self.izraz.vrijednost(mem)
+        if r=='UNDEFINED' or r==0: return 0
+        elif r== 'TRUE' or r==1: return 1
+        elif r =='FALSE' or r==-1: return -1
+        return -1
 
 class Grananje(AST('logika naredba')):
     def izvrši(self, mem):
@@ -614,6 +608,16 @@ class Pridruzivanje_liste(AST('varijable tip lista')):
         pass
 
 
+
+class Dohvat_liste(AST('ime_liste izraz')):
+    def vrijednost(self, mem):
+       
+        l=self.ime_liste.vrijednost(mem) 
+        i=self.izraz.vrijednost(mem) 
+        return l[i].vrijednost(mem) 
+
+
+
 class Pridruzivanje(AST('varijabla izraz')):
     def izvrši(self, mem):
         if self.varijabla.vrsta()=='IME_LISTA':
@@ -635,7 +639,6 @@ class Pridruzivanje(AST('varijabla izraz')):
 
         mem[self.varijabla] =r
 
-
 class U_okolinu(AST('funkcija_logika')):
     def izvrši(self, mem):
         self.vrijednost(mem)
@@ -653,19 +656,20 @@ class U_okolinu(AST('funkcija_logika')):
             elif r== 1 :
                 t.pendown()
             return r
-        elif self.funkcija_logika[0] ^ T.U_OKOLINU_SPEED:
-            print("U okolinu dan speed: " + str(r))
-            return r
+        
         elif self.funkcija_logika[0] ^ T.U_OKOLINU_PRINT:
             print("Ispisujem: " + str(r))
             return r
         elif self.funkcija_logika[0] ^ T.U_OKOLINU_ROTATION:
-            print("U okolinu dan rotation: " + str(r))
+            print("U okolinu postavljen rotation: " + str(r))
             t.left(r)
-            #t.write(r)
+            return r
+        elif self.funkcija_logika[0] ^ T.U_OKOLINU_SPEED:
+            print("U okolinu postavljen speed: " + str(r))
+            t.pen(speed=r)
             return r
         elif self.funkcija_logika[0] ^ T.U_OKOLINU_STEPS:
-            print("U okolinu dani steps: " + str(r))
+            print("U okolinu postavljen broj koraka: " + str(r))
             
             t.forward(r)
             return r
@@ -677,25 +681,23 @@ class Iz_okoline(AST('funkcija_logika')):
         print("IZ OKOLINE DOBIVENO: 11")
         return 11
     def vrijednost(self, mem):
-        if self.funkcija_logika ^ T.IZ_OKOLINE_SPEED:
-            print("IZ OKOLINE DOBIVENA BRZINA: 11")
-            return 11
-        elif self.funkcija_logika ^ T.IZ_OKOLINE_POWER:
-            print("IZ OKOLINE DOBIVEN POWER : 1")
-            return 1
-        elif self.funkcija_logika ^ T.IZ_OKOLINE_DIST:
-            print("IZ OKOLINE DOBIVENA UDALJENOST: 13")
-            return 13
+      
+       
+        if self.funkcija_logika ^ T.IZ_OKOLINE_ORI:
+            print(f"IZ OKOLINE DOBIVENA orijentacija: {int(t.heading())}")
+            return int(t.heading())
         elif self.funkcija_logika ^ T.IZ_OKOLINE_COORD:
-            print("IZ OKOLINE DOBIVENE koordinate: [2,15]")
-            return [2,15]
+            print("IZ OKOLINE DOBIVENE koordinate: " + str(t.pos()))
+            return [int(t.pos()[0]),int(t.pos()[1])]
         else:
             raise GreškaIzvođenja("iz okoline nema")
 
-
 class LESS(AST('izrazi')):
-    def izvrši(self, mem):
-        return
+    def vrijednost(self,mem):
+        a=self.izrazi[0].vrijednost(mem)
+        b=self.izrazi[1].vrijednost(mem)
+
+        return a < b
 
 class EQ(AST('izrazi')):
     def izvrši(self, mem):
@@ -708,7 +710,23 @@ class EQ(AST('izrazi')):
 
         return a==b
            
+class In(AST('izraz lista')):
+    def vrijednost(self,mem):
+        a=self.izraz.vrijednost(mem)
 
+        if self.lista ^ T.IME_LISTA:
+            l=self.lista.vrijednost(mem)
+        else:
+            l=self.lista[0]
+
+      
+        for i in l:
+            if a == i.vrijednost(mem):
+                return 1
+        return -1
+        
+
+       
 class OR(AST('literali')):
     #OR(A, B) === MAX(A, B)
     def izvrši(self, mem):
@@ -851,54 +869,36 @@ class Potencija(AST('baza eksponent')):
 
 ######################################
 
-ulaz2 ='''\
 
 
-rot = 30;
+ulaz ='''\
+print("program pocinje s radom");
+rot = 90;
+x,y= getCoord();
+r=getOrientation();
+
 
 setPower(TRUE);
-for (i=0; i < 20 ; i++){
+setSpeed(9);
+
+for (i=0; i < 8 ; i++){
+    
+    
+    x,y= getCoord();
+    r=getOrientation();
+
     setSteps(50);
     setRot(rot);
 
-    if (i == 10) rot = 20 + rot;
-    if (i == 15) setPower(FALSE);
+    if (i == 4) rot =  rot-45;
+    if (i == 4) break;
 }
 
-setSteps(200);
-setRot(30);
+print("program gotov s radom");
 
 '''
 
-ulaz3 ='''\
 
-c= 3;
-L = [ 20 + 4 , 20 + 6 ];
-
-v,p = L;
-
-setSpeed(p+c);
-
-'''
-ulaz ='''\
-
-//c= 3;
-
-v,p = getCoord();
-
-print(p);
-
-L = [ 20 + 4 , 20 + 6 ];
-v,p = L;
-
-print(p);
-
-v,p = [2,4];
-
-print(p);
-
-
-'''
 
 print(ulaz)
 P.tokeniziraj(ulaz)
@@ -933,12 +933,13 @@ cpp = P(ulaz)
 
 prikaz(cpp)
 
-#t = turtle.Turtle()
+t = turtle.Turtle()
 
-#init_turtle(t)
+init_turtle(t)
+
 cpp.izvrši()
 
-#t.getscreen()._root.mainloop()
+t.getscreen()._root.mainloop()
 
 
 
