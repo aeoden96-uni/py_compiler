@@ -210,11 +210,10 @@ def cpp(lex):
 
         #nakon / će odmah slijediti *
         elif znak == '/':
-            lex >> '*'
-            while not lex >= '*':
+            if lex  >= '/':
+                lex.pročitaj_do('\n')
                 lex.zanemari()
-            lex >> '/'
-            lex.zanemari()
+                
 
         else: yield lex.literal(T)
 
@@ -412,6 +411,8 @@ class P(Parser):
         
 
     def izraz(self):
+        
+
         prvi = self.član()
         
         if self >= T.PLUS:
@@ -452,18 +453,47 @@ class P(Parser):
         elif log := self >= T.UNDEFINED:
              return log
 
+        if self >= T.MINUS:
+            #UNARNI MINUS
 
-
-
-        elif self >> T.OOTV: #PROMJENA TIPA
-            if tip :=self >= T.INT_TIP:
+            if drugi :=self >= {T.IME,T.BROJ}:
+                return Minus([0, drugi])
+            else:
+                self >> T.OOTV
+                u_zagradi = self.izraz()
                 self >> T.OZATV
-                u_zagradi=self.izraz()
-                return U_int(u_zagradi)
-            else: #u zagradi
+                return Minus([0, u_zagradi])
+
+
+        elif self >> T.OOTV: 
+            
+            if tip :=self >= T.INT_TIP:
+                #PROMJENA TIPA U int
+                self >> T.OZATV
+                if drugi :=self >= {T.IME,T.BROJ,T.STRING}:
+                    return U_int(drugi)
+                else:
+                    self >> T.OOTV
+                    u_zagradi = self.izraz()
+                    self >> T.OZATV
+                    return U_int(u_zagradi)
+    
+            elif tip :=self >= T.STR_TIP:
+                #PROMJENA TIPA U string
+                self >> T.OZATV
+                if drugi :=self >= {T.IME,T.BROJ,T.STRING}:
+                    return U_string(drugi)
+                else:
+                    self >> T.OOTV
+                    u_zagradi = self.izraz()
+                    self >> T.OZATV
+                    return U_string(u_zagradi)
+            else: 
+                #u zagradi
                 u_zagradi = self.izraz()
                 self >> T.OZATV
                 return u_zagradi
+
 
 class Prekid(NelokalnaKontrolaToka): """Signal koji šalje naredba break."""
 
@@ -510,6 +540,15 @@ class U_int(AST('izraz')):
     def vrijednost(self,mem):
         r=self.izraz.vrijednost(mem)
         return int(r)
+
+class U_string(AST('izraz')):
+    def izvrši(self, mem):
+        r=self.izraz.vrijednost(mem)
+        print(r)
+        return int(r)
+    def vrijednost(self,mem):
+        r=self.izraz.vrijednost(mem)
+        return str(r)
 
 class Grananje(AST('logika naredba')):
     def izvrši(self, mem):
@@ -714,7 +753,11 @@ class Umnožak(AST('faktori')):
 class Minus(AST('pribrojnici')):
     def vrijednost(self,mem):
         a, b = self.pribrojnici
-        return a.vrijednost(mem) - b.vrijednost(mem)
+        if a is not 0:
+            return a.vrijednost(mem) - b.vrijednost(mem)
+        else:
+            #unarni minus
+            return  - b.vrijednost(mem)
 
     def optim(self,izraz):
         a, b = izraz.pribrojnici
@@ -782,7 +825,7 @@ setRot(30);
 
 '''
 
-ulaz ='''\
+ulaz3 ='''\
 
 c= 3;
 L = [ 20 + 4 , 20 + 6 ];
@@ -792,7 +835,14 @@ v,p = L;
 setSpeed(p+c);
 
 '''
+ulaz ='''\
 
+//test test
+c= 2*8;
+setSpeed(c);
+
+
+'''
 
 print(ulaz)
 P.tokeniziraj(ulaz)
@@ -827,12 +877,12 @@ cpp = P(ulaz)
 
 prikaz(cpp)
 
-t = turtle.Turtle()
+#t = turtle.Turtle()
 
-init_turtle(t)
+#init_turtle(t)
 cpp.izvrši()
 
-t.getscreen()._root.mainloop()
+#t.getscreen()._root.mainloop()
 
 
 
