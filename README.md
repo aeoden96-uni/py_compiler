@@ -1,6 +1,5 @@
 # Python compiler for imaginary C-like language for robots 🤖
 
-https://github.com/aeoden96/IP_zadaca
 
 ## Contributors
 ```sh
